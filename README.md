@@ -1,60 +1,79 @@
-# template-for-proposals
+# EcmaScript Proposal: Regular Expression Verbose Flag
 
-A repository template for ECMAScript proposals.
+## Status
 
-## Before creating a proposal
+Champion(s): Currently none
 
-Please ensure the following:
-  1. You have read the [process document](https://tc39.github.io/process-document/)
-  1. You have reviewed the [existing proposals](https://github.com/tc39/proposals/)
-  1. You are aware that your proposal requires being a member of TC39, or locating a TC39 delegate to "champion" your proposal
+Stage: -1
 
-## Create your proposal repo
+## Motivation
 
-Follow these steps:
-  1.  Click the green ["use this template"](https://github.com/tc39/template-for-proposals/generate) button in the repo header. (Note: Do not fork this repo in GitHub's web interface, as that will later prevent transfer into the TC39 organization)
-  1.  Go to your repo settings “Options” page, under “GitHub Pages”, and set the source to the **main branch** under the root (and click Save, if it does not autosave this setting)
-      1. check "Enforce HTTPS"
-      1. On "Options", under "Features", Ensure "Issues" is checked, and disable "Wiki", and "Projects" (unless you intend to use Projects)
-      1. Under "Merge button", check "automatically delete head branches"
-<!--
-  1.  Avoid merge conflicts with build process output files by running:
-      ```sh
-      git config --local --add merge.output.driver true
-      git config --local --add merge.output.driver true
-      ```
-  1.  Add a post-rewrite git hook to auto-rebuild the output on every commit:
-      ```sh
-      cp hooks/post-rewrite .git/hooks/post-rewrite
-      chmod +x .git/hooks/post-rewrite
-      ```
--->
-  3.  ["How to write a good explainer"][explainer] explains how to make a good first impression.
+In most languages, a programmer can use both whitespace to visually group related logic together, and comments to label sections or explain something that's not otherwise obvious. Regular expression syntax does not allow the use of whitespace or comments, making it much more difficult to write understandable regular expressions. This proposal seeks to add a verbose flag (`x`) to regular expressions, which causes whitespace and comments to be ignored inside the regular expression.
 
-      > Each TC39 proposal should have a `README.md` file which explains the purpose
-      > of the proposal and its shape at a high level.
-      >
-      > ...
-      >
-      > The rest of this page can be used as a template ...
+## Description
 
-      Your explainer can point readers to the `index.html` generated from `spec.emu`
-      via markdown like
+When the `x` flag is used on a regular expression, all whitespace will be ignored (including spaces, tabs, carriage returns, and line feeds), as will as anything that comes after the comment delimiter (`#`)
 
-      ```markdown
-      You can browse the [ecmarkup output](https://ACCOUNT.github.io/PROJECT/)
-      or browse the [source](https://github.com/ACCOUNT/PROJECT/blob/HEAD/spec.emu).
-      ```
+```javascript
+const regex = / ^ [0-9]{3} \+ [0-9]{3} $ # This is ignored /x
+regex.test('123+456') // true
+```
 
-      where *ACCOUNT* and *PROJECT* are the first two path elements in your project's Github URL.
-      For example, for github.com/**tc39**/**template-for-proposals**, *ACCOUNT* is "tc39"
-      and *PROJECT* is "template-for-proposals".
+Comments aren't that useful within a regular expression literal. In order to take full advantage of the verbose flag, we can use a multiline regular expression.
 
+```javascript
+const regex = new RegExp(String.raw`
+  ^
+    [0-9]{3} # matches three numbers
+    \+
+    [0-9]{3} # matches three numbers
+  $
+`, 'x')
+```
 
-## Maintain your proposal repo
+If spaces or the `#` character are needed, they can be escaped.
 
-  1. Make your changes to `spec.emu` (ecmarkup uses HTML syntax, but is not HTML, so I strongly suggest not naming it ".html")
-  1. Any commit that makes meaningful changes to the spec, should run `npm run build` and commit the resulting output.
-  1. Whenever you update `ecmarkup`, run `npm run build` and commit any changes that come from that dependency.
+```javascript
+/\#\ \#/x.test('# #') // true
+```
 
-  [explainer]: https://github.com/tc39/how-we-work/blob/HEAD/explainer.md
+## Better multiline support (add-on feature)
+
+While not strictly required, the verbose flag's usability would be greatly improved if better support was provided for making multiline regular expressions. This can easily be achieved with a tagged template literal as follows:
+
+```javascript
+const regex = RegExp.from('x')`
+  ^
+    [0-9]{3} # matches three numbers
+    \+
+    [0-9]{3} # matches three numbers
+  $
+`
+```
+
+The `RegExp.from()` method takes a string containing different flags and returns a template tag that can be used to construct a multiline regular expression.
+
+There's been talk of allowing `RegExp.from()` to support variable interpolation with other regular expressions. This opens up a number of issues dealing with how to best incorporate the flags of the interpolated regular expressions with the new one, but it's a discussion that we can continue to have if there's interest in that kind of behavior.
+
+## Comparison
+
+The inspiration for a verbose flag is largely draw from Python. Here's an example of their implementation, pulled from their doc site:
+
+```python
+a = re.compile(r"""\d +  # the integral part
+                   \.    # the decimal point
+                   \d *  # some fractional digits""", re.X)
+```
+
+Coffeescript has supported multiline regular expressions with comments and whitespace support for a long time now. Here's an example pulled from their website:
+
+```coffeescript
+NUMBER     = ///
+  ^ 0b[01]+    |              # binary
+  ^ 0o[0-7]+   |              # octal
+  ^ 0x[\da-f]+ |              # hex
+  ^ \d*\.?\d+ (?:e[+-]?\d+)?  # decimal
+///i
+```
+
+The main difference between this proposal and CoffeeScript's implementation is that CoffeeScript has a dedicated syntax for multiline regular expressions. The reason dedicated syntax is not being proposed is because Javascript's template tags are just as expressive as a dedicated multiline syntax, and the best choice for dedicated syntax (`///`) can't be used, as it already has a different meaning in Javascript (`///` is a comment).
