@@ -77,3 +77,11 @@ NUMBER     = ///
 ```
 
 The main difference between this proposal and CoffeeScript's implementation is that CoffeeScript has a dedicated syntax for multiline regular expressions. The reason dedicated syntax is not being proposed is because Javascript's template tags are just as expressive as a dedicated multiline syntax, and the best choice for dedicated syntax (`///`) can't be used, as it already has a different meaning in Javascript (`///` is a comment).
+
+Another example of prior art is the third-party Javascript library [xregexp](https://xregexp.com/). It supports the "x" flag too, which provides whitespace support and comments via the "#" character. Here's an example from their webpage:
+
+```javascript
+const date = XRegExp(`(?<year>  [0-9]{4} ) -?  # year
+                      (?<month> [0-9]{2} ) -?  # month
+                      (?<day>   [0-9]{2} )     # day`, 'x');
+```
